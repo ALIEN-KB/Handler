@@ -92,7 +92,7 @@ class GuardService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         goForeground()
         when (intent?.action) {
-            ACTION_PAUSE -> scope.launch { Engine.suspend(this@GuardService, Engine.MANUAL, "from notification") }
+            ACTION_PAUSE -> scope.launch { Engine.pause(this@GuardService, Engine.MANUAL, "from notification") }
             ACTION_RESUME -> scope.launch { Engine.resume(this@GuardService, "from notification", manual = true) }
         }
         return START_STICKY
@@ -149,7 +149,7 @@ class GuardService : Service() {
                     continue
                 }
                 if (fg in p.protectedApps && fg != pausedBy) {
-                    Engine.suspend(this, fg, "switched app")
+                    Engine.pause(this, fg, "switched app")
                 }
                 val stillInside = fg in p.protectedApps || fg in ForegroundTracker.NEUTRAL || fg == packageName
                 if (stillInside || now - p.suspendedAt < LAUNCH_GRACE_MS) {
@@ -171,7 +171,7 @@ class GuardService : Service() {
                 if (p.autoDetect && fg != null && fg in p.protectedApps && fg != p.snoozedPkg &&
                     A11y.canWrite(this) && p.targets.isNotEmpty()
                 ) {
-                    Engine.suspend(this, fg, "auto-detected")
+                    Engine.pause(this, fg, "auto-detected")
                     delay(700)
                 } else {
                     delay(if (p.autoDetect && p.protectedApps.isNotEmpty()) 450 else 3_000)

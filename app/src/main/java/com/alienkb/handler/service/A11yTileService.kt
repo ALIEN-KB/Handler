@@ -20,7 +20,7 @@ class A11yTileService : TileService() {
         val p = Prefs(this)
         if (!A11y.canWrite(this) || p.targets.isEmpty()) return
         if (p.suspendedBy != null) Engine.resume(this, "quick tile", manual = true)
-        else Engine.suspend(this, Engine.MANUAL, "quick tile")
+        else Engine.pause(this, Engine.MANUAL, "quick tile")
         render()
     }
 

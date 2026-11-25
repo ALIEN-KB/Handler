@@ -23,7 +23,7 @@ class SafeLaunchActivity : Activity() {
             return
         }
         val p = Prefs(this)
-        val paused = pkg in p.protectedApps && Engine.suspend(this, pkg, "lock shortcut")
+        val paused = pkg in p.protectedApps && Engine.pause(this, pkg, "lock shortcut")
         GuardService.start(this)
         // Give the system a moment to unbind the service before the app checks for it.
         Handler(Looper.getMainLooper()).postDelayed({

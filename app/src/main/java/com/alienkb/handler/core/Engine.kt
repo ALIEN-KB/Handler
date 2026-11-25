@@ -47,7 +47,7 @@ object Engine {
 
     /** Turn the managed services off because [by] (a package or MANUAL) is on screen. */
     @Synchronized
-    fun suspend(ctx: Context, by: String, reason: String): Boolean {
+    fun pause(ctx: Context, by: String, reason: String): Boolean {
         val app = ctx.applicationContext
         val p = Prefs(app)
         if (!A11y.canWrite(app)) {
@@ -131,12 +131,12 @@ object Engine {
         if (missing.isNotEmpty()) {
             val fg = ForegroundTracker.current(app)
             if (fg != null && fg in p.protectedApps && fg != p.snoozedPkg) {
-                suspend(app, fg, "protected app open")
+                pause(app, fg, "protected app open")
                 return
             }
             if (fg != null && fg in ForegroundTracker.SETTINGS && reason == REASON_SETTING) {
                 // You turned it off yourself: treat it as a manual pause, back ON when you lock the phone.
-                suspend(app, MANUAL, "turned off in Settings")
+                pause(app, MANUAL, "turned off in Settings")
                 return
             }
             A11y.setEnabled(app, p.targets, true)

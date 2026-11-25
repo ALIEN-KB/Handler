@@ -206,7 +206,7 @@ fun HomeScreen(onOpenSetup: () -> Unit) {
                             onClick = {
                                 scope.launch(Dispatchers.Default) {
                                     if (paused) Engine.resume(ctx, "from app", manual = true)
-                                    else Engine.suspend(ctx, Engine.MANUAL, "from app")
+                                    else Engine.pause(ctx, Engine.MANUAL, "from app")
                                 }
                                 refresh++
                             },
