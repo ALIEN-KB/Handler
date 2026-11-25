@@ -34,8 +34,11 @@ It works with any accessibility app; Curbox itself does not need to be modified.
 
 ## Install
 
-1. Download the latest APK from **Actions → Build APK → Handler-apk** (or from Releases).
-2. Install it and walk through the intro.
+### [⬇ Download Handler.apk](https://github.com/ALIEN-KB/Handler/releases/latest/download/Handler.apk)
+
+Open the link on your phone, tap the downloaded file and allow "Install unknown apps" if asked.
+All versions are on the [Releases page](https://github.com/ALIEN-KB/Handler/releases).
+To update, just install the new APK over the old one.
 
 ## One-time setup (the important bit)
 
