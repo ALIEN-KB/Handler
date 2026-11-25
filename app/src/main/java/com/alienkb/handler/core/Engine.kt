@@ -22,8 +22,56 @@ object Engine {
     private const val STALE_PAUSE_MS = 30 * 60_000L
 
     private val main = Handler(Looper.getMainLooper())
+    private const val SETTLE_MS = 2_500L
+
     private var notBoundSince = 0L
     private var lastKick = 0L
+
+    @Volatile
+    private var lastEnabledAt = 0L
+
+    private fun now() = System.currentTimeMillis()
+
+    private fun nap(ms: Long) = try {
+        Thread.sleep(ms)
+    } catch (_: InterruptedException) {
+    }
+
+    /** Switch services on and remember when, so we never switch them off mid-startup. */
+    private fun enable(app: Context, targets: Collection<String>) {
+        A11y.setEnabled(app, targets, true)
+        lastEnabledAt = now()
+    }
+
+    /**
+     * Some accessibility apps (Curbox included) crash if they're switched off before
+     * onServiceConnected() has run. After switching a service on, wait until the system
+     * has bound it (plus a small margin) before switching it off again. Max ~2.5 s.
+     */
+    private fun waitUntilStarted(app: Context, targets: Collection<String>) {
+        val deadline = lastEnabledAt + SETTLE_MS
+        if (now() >= deadline) return
+        val wanted = targets.mapNotNull { A11y.parse(it) }
+        while (now() < deadline) {
+            val bound = A11y.boundComponents(app) ?: break
+            if (wanted.all { it in bound }) {
+                nap(400)
+                return
+            }
+            nap(100)
+        }
+    }
+
+    /** Wait (max 2 s) until the system has really unbound the services. */
+    private fun waitUntilStopped(app: Context, targets: Collection<String>) {
+        val wanted = targets.mapNotNull { A11y.parse(it) }
+        val deadline = now() + 2_000L
+        while (now() < deadline) {
+            val bound = A11y.boundComponents(app) ?: return
+            if (wanted.none { it in bound }) return
+            nap(100)
+        }
+    }
 
     fun label(ctx: Context, pkg: String?): String = when (pkg) {
         null -> "-"
@@ -59,6 +107,7 @@ object Engine {
             return false
         }
         val previous = p.suspendedBy
+        if (previous == null) waitUntilStarted(app, p.targets)
         A11y.setEnabled(app, p.targets, false)
         p.suspendedBy = by
         p.suspendedAt = System.currentTimeMillis()
@@ -82,14 +131,14 @@ object Engine {
         val p = Prefs(app)
         if (p.suspendedBy == null) {
             if (manual) {
-                A11y.setEnabled(app, p.targets, true)
+                enable(app, p.targets)
                 afterChange(app)
             }
             return
         }
         p.suspendedBy = null
         p.suspendedAt = 0L
-        A11y.setEnabled(app, p.targets, true)
+        enable(app, p.targets)
         DevOptions.restore(app, p)
         if (manual) {
             p.snoozedPkg = ForegroundTracker.current(app)?.takeIf { it in p.protectedApps }
@@ -139,7 +188,7 @@ object Engine {
                 pause(app, MANUAL, "turned off in Settings")
                 return
             }
-            A11y.setEnabled(app, p.targets, true)
+            enable(app, p.targets)
             p.restoreCount = p.restoreCount + 1
             p.log("Watchdog restored ${missing.joinToString { label(app, it.packageName) }} · $reason")
             toast(app, p, "Handler switched accessibility back ON")
@@ -164,12 +213,11 @@ object Engine {
             lastKick = now
             notBoundSince = 0L
             val flat = stuck.map { it.flattenToString() }
+            waitUntilStarted(app, flat)
             A11y.setEnabled(app, flat, false)
-            try {
-                Thread.sleep(700)
-            } catch (_: InterruptedException) {
-            }
-            A11y.setEnabled(app, flat, true)
+            waitUntilStopped(app, flat)
+            nap(300)
+            enable(app, flat)
             p.restoreCount = p.restoreCount + 1
             p.log("Watchdog restarted ${stuck.joinToString { label(app, it.packageName) }} (it was stuck)")
             afterChange(app)

@@ -6,6 +6,7 @@ import android.service.quicksettings.TileService
 import com.alienkb.handler.core.A11y
 import com.alienkb.handler.core.Engine
 import com.alienkb.handler.core.Prefs
+import kotlin.concurrent.thread
 
 /** Quick Settings tile: tap to pause / resume accessibility by hand. */
 class A11yTileService : TileService() {
@@ -19,9 +20,12 @@ class A11yTileService : TileService() {
         super.onClick()
         val p = Prefs(this)
         if (!A11y.canWrite(this) || p.targets.isEmpty()) return
-        if (p.suspendedBy != null) Engine.resume(this, "quick tile", manual = true)
-        else Engine.pause(this, Engine.MANUAL, "quick tile")
-        render()
+        val app = applicationContext
+        val paused = p.suspendedBy != null
+        thread {
+            if (paused) Engine.resume(app, "quick tile", manual = true)
+            else Engine.pause(app, Engine.MANUAL, "quick tile")
+        }
     }
 
     private fun render() {
